@@ -1,0 +1,242 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: This master template executes other templates to create a CloudWatch log group
+  and EC2 instance, and exports logs from the EC2 instance to the log group and then to S3.
+ # ----------------------------------------------------------------------------
+ # Copyright 2017 Amazon.com, Inc. or its affiliates. 
+ # Licensed under the Apache License, Version 2.0 (the "License");
+ # you may not use this file except in compliance with the License.
+ # You may obtain a copy of the License at
+ #
+ #    http://www.apache.org/licenses/LICENSE-2.0
+ #
+ # Unless required by applicable law or agreed to in writing, software
+ # distributed under the License is distributed on an "AS IS" BASIS,
+ # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ # See the License for the specific language governing permissions and
+ # limitations under the License.
+ # ----------------------------------------------------------------------------
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+    - Label:
+        default: Template Location
+      Parameters:
+      - TemplateBucketName
+      - TemplateBucketPrefix  
+    - Label:
+        default: Logs parameters
+      Parameters:
+      - TheLogsBucketName
+      - EC2LogsPrefix
+    - Label:
+        default: EC2 Instance parameters
+      Parameters:
+      - VPCId
+      - VPCSubnet
+      - InstanceType
+      - s3BucketForResults
+  
+Parameters:
+  TemplateBucketName:
+    Default: aws-bigdata-blog
+    Description: 'S3 bucket name for the CF templates to run- no ''s3:'' at the beginning, nor ''/'' at the end).'
+    Type: String
+    AllowedPattern: "^([a-z]|(\\d(?!\\d{0,2}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3})))([a-z\\d]|(\\.(?!(\\.|-)))|(-(?!\\.))){1,61}[a-z\\d\\.]$"
+  TemplateBucketPrefix:
+    Default: artifacts/cloudwatchlogsexport2s3
+    Description: 'S3 prefix for the lambda zip file'
+    Type: String
+    #AllowedPattern: "^[0-9a-zA-Z-]+(/[0-9a-zA-Z-]+)*$"
+  s3BucketForResults:
+    Type: String
+    Description: S3bucket to write results out to
+    Default: yourresultsbucket
+  TheLogsBucketName:
+    Description: 'Name of the bucket to which to export the CW logs'
+    Type: String
+    Default: yourlogsbucket
+  EC2LogsPrefix:
+    Type: String
+    Description: "Prefix for EC2 CloudWatch logs in logs bucket"
+    Default: cloudwatchlogs/ec2logs
+  InstanceType:
+    Description: 'Instance type of the EC2 instance.'
+    Type: String
+    Default: 't2.nano'
+  VPCSubnet:
+    Description: 'Subnet in which to create the EC2 instance.'
+    Type: AWS::EC2::Subnet::Id
+  VPCId: 
+    Description: 'VPC in which to create the EC2 instance.'
+    Type: AWS::EC2::VPC::Id
+    
+Mappings:
+  # S3 endpoints per region are needed to substitute in the template URL locations
+  # Per: http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region
+  AWSInfoRegionMap:
+    ap-northeast-1:
+      Partition: aws
+      S3EndpointURL: https://s3.amazonaws.com
+    ap-northeast-2:
+      Partition: aws
+      S3EndpointURL: https://s3.amazonaws.com
+    ap-south-1:
+      Partition: aws
+      S3EndpointURL: https://s3.amazonaws.com
+    ap-southeast-1:
+      Partition: aws
+      S3EndpointURL: https://s3.amazonaws.com
+    ap-southeast-2:
+      Partition: aws
+      S3EndpointURL: https://s3.amazonaws.com
+    eu-central-1:
+      Partition: aws
+      S3EndpointURL: https://s3.amazonaws.com
+    eu-west-1:
+      Partition: aws
+      S3EndpointURL: https://s3.amazonaws.com
+    sa-east-1:
+      Partition: aws
+      S3EndpointURL: https://s3.amazonaws.com
+    us-east-1:
+      Partition: aws
+      S3EndpointURL: https://s3.amazonaws.com
+    us-east-2:
+      Partition: aws
+      S3EndpointURL: https://s3.amazonaws.com
+    us-gov-west-1:
+      Partition: aws-us-gov
+      S3EndpointURL: https://s3-us-gov-west-1.amazonaws.com
+    us-west-1:
+      Partition: aws
+      S3EndpointURL: https://s3.amazonaws.com
+    us-west-2:
+      Partition: aws
+      S3EndpointURL: https://s3.amazonaws.com
+Resources:
+  CWExportStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL:
+        Fn::Join:
+        - "/"
+        - - Fn::FindInMap:
+            - AWSInfoRegionMap
+            - Ref: AWS::Region
+            - S3EndpointURL
+          - Ref: TemplateBucketName
+          - Ref: TemplateBucketPrefix
+          - cloudwatchlogsexport2s3.yaml    
+      Parameters:
+        TemplateBucketName: 
+            Ref: TemplateBucketName
+        TemplateBucketPrefix:
+            Ref: TemplateBucketPrefix
+        TheLogsBucketName:
+            Ref: TheLogsBucketName
+                  
+  PiCalculatorSecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: Create SecurityGroup for Calculating instance to avoid defaults
+      VpcId:
+        Ref: VPCId
+        
+  EC2PiCalculatorRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - ec2.amazonaws.com
+          Action: sts:AssumeRole
+      Policies:
+      - PolicyName:
+          Fn::Sub: "${AWS::StackName}-s3Policy"
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - s3:Put*
+            Resource:
+              - Fn::Join:
+                - ""
+                - - "arn:aws:s3:::"
+                  - Ref: s3BucketForResults
+              - Fn::Join:
+                - ""
+                - - "arn:aws:s3:::"
+                  - Ref: s3BucketForResults
+                  - "/*"
+      - PolicyName:
+          Fn::Sub: "${AWS::StackName}-ec2LoggingPolicy"
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action: ec2:AssociateAddress
+            Resource: "*"
+          - Effect: Allow
+            Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            - logs:DescribeLogStreams
+            Resource: arn:aws:logs:*:*:*
+            
+  PiCalcRoleProfile:
+    Type: "AWS::IAM::InstanceProfile"
+    Properties:
+      Roles:
+      - Ref: EC2PiCalculatorRole
+      
+  EC2InstanceStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: 
+    - PiCalcRoleProfile
+    - CWExportStack
+    Properties:
+      TemplateURL: 
+        Fn::Join:
+        - "/"
+        - - Fn::FindInMap:
+            - AWSInfoRegionMap
+            - Ref: AWS::Region
+            - S3EndpointURL
+          - Ref: TemplateBucketName
+          - Ref: TemplateBucketPrefix
+          - run-ec2-instance.yaml
+      Parameters:      
+        VPCSubnet:
+          Ref: VPCSubnet
+        SecurityGroup:
+          Ref: PiCalculatorSecurityGroup
+        s3BucketForResults:
+          Ref: s3BucketForResults
+        EC2InstanceIAMRoleName: 
+            Ref: EC2PiCalculatorRole
+        InstanceType:
+          Ref: InstanceType
+        EC2LogGroup:
+          Fn::GetAtt:
+          - CWExportStack
+          - Outputs.EC2Logs 
+        CFStackToDelete:
+          Ref: AWS::StackName
+
+            
+Outputs:
+ EC2Logs: 
+  Description: "Cloudwatch log group for EC2 logs"
+  Value: 
+      Fn::GetAtt:
+      - CWExportStack
+      - Outputs.EC2Logs
+  Export: 
+   Name: 
+    "Fn::Sub": "${AWS::StackName}-EC2Logs"  
+
