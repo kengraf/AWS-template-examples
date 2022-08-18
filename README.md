@@ -1,6 +1,6 @@
 # aws-ec2-logging
 
-This class exercise is based apon  Veronika Megler's work. ![here](https://aws.amazon.com/blogs/mt/how-to-export-ec2-instance-execution-logs-to-an-s3-bucket-using-cloudwatch-logs-lambda-and-cloudformation/)  
+This class exercise is based apon  Veronika Megler's work. [here](https://aws.amazon.com/blogs/mt/how-to-export-ec2-instance-execution-logs-to-an-s3-bucket-using-cloudwatch-logs-lambda-and-cloudformation/)  
 Some updating was needed as the AWS platform continues to evolve.
 
 ###Running the solution  
