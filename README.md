@@ -3,7 +3,7 @@
 This class exercise is based apon  Veronika Megler's work. [here](https://aws.amazon.com/blogs/mt/how-to-export-ec2-instance-execution-logs-to-an-s3-bucket-using-cloudwatch-logs-lambda-and-cloudformation/)  
 Some updating was needed as the AWS platform continues to evolve.
 
-###Running the solution  
+### Running the solution  
 Your S3 buckets need to be created prior to launching the stack.  At a minimum your need a writable bucket for your logs.  
 
 To see this solution in operation in us-east-2, choose the “Launch Stack” button&nbsp;below.  
