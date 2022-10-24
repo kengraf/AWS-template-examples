@@ -1,3 +1,8 @@
+# Basic Ec2 instance
+
+#Full LAMP stack
+https://s3.us-east-2.amazonaws.com/cloudformation-templates-us-east-2/LAMP_Single_Instance.template
+
 # aws-ec2-logging
 
 This class exercise is based apon  Veronika Megler's work. [here](https://aws.amazon.com/blogs/mt/how-to-export-ec2-instance-execution-logs-to-an-s3-bucket-using-cloudwatch-logs-lambda-and-cloudformation/)  
