@@ -1,3 +1,8 @@
+# EC2 launch template
+Create EC2 AWS linux instance with a default Nginx install and user SSH keys for user yoda.  
+```
+wget 
+
 # Basic EC2 instance [![Launch Stack](https://cdn.rawgit.com/buildkite/cloudformation-launch-stack-button-svg/master/launch-stack.svg)](https://console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/new?stackName=cwlogsexport2s3&amp;templateURL=https://raw.githubusercontent.com/kengraf/AWS-template-examples/main/LampStack/SingleInstance.yaml)
 
 Create a t2.micro instance in us-east-2 running the latest AWS Linux AMI.  
